@@ -74,41 +74,50 @@ Shader "Crimson/WaterURP"
             };
 
             void AccumulateWave(float amp, float wl, float2 dir, float spd, float3 worldPos, inout float y, inout float2 grad)
-            {
-                wl = max(wl, 0.1);
-                spd = max(spd, 0.001);
-                dir = normalize(dir);
+{
+    wl = max(wl, 0.1);
+    spd = max(spd, 0.001);
+    dir = normalize(dir);
 
-                // k = 2pi / wl (inline constant to dodge any const parsing issues)
-                float k = 6.2831853 / wl;
-                float omega = sqrt(_Gravity * k) * spd;
+    float k = 6.2831853 / wl;
+    float omega = sqrt(_Gravity * k) * spd;
 
-                float phase = k * dot(dir, worldPos.xz) - omega * _SimTime;
+    float phase = k * dot(dir, worldPos.xz) - omega * _SimTime;
 
-                float s = sin(phase);
-                float c = cos(phase);
+    float s = sin(phase);
+    float c = cos(phase);
 
-                y += amp * s;
-                grad += (amp * k) * dir * c;
-            }
+    y += amp * s;
+    grad += (amp * k) * dir * c;
+}
 
-            void SampleWaves(float3 worldPos, out float height, out float3 normalWS)
-            {
-                float y = 0.0;
-                float2 grad = float2(0.0, 0.0);
+void SampleWaves(float3 worldPos, out float height, out float3 normalWS)
+{
+    float y = 0.0;
+    float2 grad = float2(0.0, 0.0);
 
-                if (_WaveCount > 0.0) AccumulateWave(_WaveData1_0.x, _WaveData1_0.y, _WaveData1_0.zw, _WaveData2_0.x, worldPos, y, grad);
-                if (_WaveCount > 1.0) AccumulateWave(_WaveData1_1.x, _WaveData1_1.y, _WaveData1_1.zw, _WaveData2_1.x, worldPos, y, grad);
-                if (_WaveCount > 2.0) AccumulateWave(_WaveData1_2.x, _WaveData1_2.y, _WaveData1_2.zw, _WaveData2_2.x, worldPos, y, grad);
-                if (_WaveCount > 3.0) AccumulateWave(_WaveData1_3.x, _WaveData1_3.y, _WaveData1_3.zw, _WaveData2_3.x, worldPos, y, grad);
-                if (_WaveCount > 4.0) AccumulateWave(_WaveData1_4.x, _WaveData1_4.y, _WaveData1_4.zw, _WaveData2_4.x, worldPos, y, grad);
-                if (_WaveCount > 5.0) AccumulateWave(_WaveData1_5.x, _WaveData1_5.y, _WaveData1_5.zw, _WaveData2_5.x, worldPos, y, grad);
-                if (_WaveCount > 6.0) AccumulateWave(_WaveData1_6.x, _WaveData1_6.y, _WaveData1_6.zw, _WaveData2_6.x, worldPos, y, grad);
-                if (_WaveCount > 7.0) AccumulateWave(_WaveData1_7.x, _WaveData1_7.y, _WaveData1_7.zw, _WaveData2_7.x, worldPos, y, grad);
+    // Fallback if no data yet: three default waves so you always see motion
+    if (_WaveCount <= 0.5)
+    {
+        AccumulateWave(0.6, 12.0, float2(1.0, 0.3), 1.0, worldPos, y, grad);
+        AccumulateWave(0.4,  8.0, float2(-0.7, 0.2), 1.1, worldPos, y, grad);
+        AccumulateWave(0.3, 20.0, float2(0.2, -1.0), 0.9, worldPos, y, grad);
+    }
+    else
+    {
+        if (_WaveCount > 0.0) AccumulateWave(_WaveData1_0.x, _WaveData1_0.y, _WaveData1_0.zw, _WaveData2_0.x, worldPos, y, grad);
+        if (_WaveCount > 1.0) AccumulateWave(_WaveData1_1.x, _WaveData1_1.y, _WaveData1_1.zw, _WaveData2_1.x, worldPos, y, grad);
+        if (_WaveCount > 2.0) AccumulateWave(_WaveData1_2.x, _WaveData1_2.y, _WaveData1_2.zw, _WaveData2_2.x, worldPos, y, grad);
+        if (_WaveCount > 3.0) AccumulateWave(_WaveData1_3.x, _WaveData1_3.y, _WaveData1_3.zw, _WaveData2_3.x, worldPos, y, grad);
+        if (_WaveCount > 4.0) AccumulateWave(_WaveData1_4.x, _WaveData1_4.y, _WaveData1_4.zw, _WaveData2_4.x, worldPos, y, grad);
+        if (_WaveCount > 5.0) AccumulateWave(_WaveData1_5.x, _WaveData1_5.y, _WaveData1_5.zw, _WaveData2_5.x, worldPos, y, grad);
+        if (_WaveCount > 6.0) AccumulateWave(_WaveData1_6.x, _WaveData1_6.y, _WaveData1_6.zw, _WaveData2_6.x, worldPos, y, grad);
+        if (_WaveCount > 7.0) AccumulateWave(_WaveData1_7.x, _WaveData1_7.y, _WaveData1_7.zw, _WaveData2_7.x, worldPos, y, grad);
+    }
 
-                height = _SeaLevel + y;
-                normalWS = normalize(float3(-grad.x, 1.0, -grad.y));
-            }
+    height = _SeaLevel + y;
+    normalWS = normalize(float3(-grad.x, 1.0, -grad.y));
+}
 
             Varyings Vert(Attributes v)
             {

@@ -7,8 +7,9 @@ public class WaterRenderer : MonoBehaviour
     const int MaxWaves = 8;
 
     [SerializeField] private WaterSettings settings;
-    [SerializeField] private Renderer targetRenderer;
+    [SerializeField] private bool animateInEditMode = true;
 
+    private Renderer targetRenderer;
     private MaterialPropertyBlock mpb;
 
     private static readonly int SeaLevelID = Shader.PropertyToID("_SeaLevel");
@@ -16,10 +17,9 @@ public class WaterRenderer : MonoBehaviour
     private static readonly int SimTimeID = Shader.PropertyToID("_SimTime");
     private static readonly int WaveCountID = Shader.PropertyToID("_WaveCount");
 
-    // Generate property IDs for each wave slot
     private static readonly int[] WaveData1IDs = new int[MaxWaves];
     private static readonly int[] WaveData2IDs = new int[MaxWaves];
-    private static bool idsInit = false;
+    private static bool idsInit;
 
     private void InitIDs()
     {
@@ -34,45 +34,35 @@ public class WaterRenderer : MonoBehaviour
 
     private void OnEnable()
     {
-        if (!targetRenderer) targetRenderer = GetComponent<Renderer>();
+        targetRenderer = GetComponent<Renderer>();
         if (mpb == null) mpb = new MaterialPropertyBlock();
         InitIDs();
-        PushStaticProps();
     }
 
     private void OnValidate()
     {
-        if (!targetRenderer) targetRenderer = GetComponent<Renderer>();
+        targetRenderer = GetComponent<Renderer>();
         InitIDs();
-        PushStaticProps();
     }
 
     private void Update()
     {
         if (!settings || !targetRenderer) return;
 
-        float time = Application.isPlaying ? Time.time : Time.realtimeSinceStartup;
-        float simTime = ((settings != null) ? settings.timeScale : 1f) * time;
+        // Time
+        float t = (Application.isPlaying || animateInEditMode) ? Time.realtimeSinceStartup : 0f;
+        float simTime = settings.timeScale * t;
 
-        targetRenderer.GetPropertyBlock(mpb);
-        mpb.SetFloat(SimTimeID, simTime);
-        targetRenderer.SetPropertyBlock(mpb);
-    }
-
-    private void PushStaticProps()
-    {
-        if (!settings || !targetRenderer) return;
-
+        // Wave count
         int count = Mathf.Min(settings.waves.Count, MaxWaves);
 
+        // Push everything every frame
         targetRenderer.GetPropertyBlock(mpb);
-
-        // Globals
         mpb.SetFloat(SeaLevelID, settings.seaLevel);
         mpb.SetFloat(GravityID, settings.gravity);
+        mpb.SetFloat(SimTimeID, simTime);
         mpb.SetFloat(WaveCountID, count);
 
-        // Pack waves into individual uniforms
         for (int i = 0; i < MaxWaves; i++)
         {
             if (i < count)
@@ -91,7 +81,6 @@ public class WaterRenderer : MonoBehaviour
             }
         }
 
-        // SimTime set in Update
         targetRenderer.SetPropertyBlock(mpb);
     }
 }
