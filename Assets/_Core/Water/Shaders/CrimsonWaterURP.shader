@@ -24,29 +24,40 @@ Shader "Crimson/WaterURP"
             #pragma vertex Vert
             #pragma fragment Frag
             #pragma target 4.5
+            #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
-            // Material properties
-            CBUFFER_START(UnityPerMaterial)
-                float4 _ShallowColor;
-                float4 _DeepColor;
-                float _FresnelStrength;
-                float _FresnelPower;
+            // Material properties (as plain uniforms to avoid any D3D11 CBUFFER quirks)
+            float4 _ShallowColor;
+            float4 _DeepColor;
+            float   _FresnelStrength;
+            float   _FresnelPower;
 
-                float _SeaLevel;
-                float _Gravity;
-                float _SimTime;
+            // Water sim params (set via WaterRenderer MPB)
+            float   _SeaLevel;
+            float   _Gravity;
+            float   _SimTime;
+            float   _WaveCount; // 0..8
 
-                int _WaveCount;
-                float _Amp[8];
-                float _WL[8];
-                float _DirX[8];
-                float _DirZ[8];
-                float _Speed[8];
-            CBUFFER_END
+            // Per-wave packed data (amp, wavelength, dirX, dirZ) and (speed, 0,0,0)
+            float4 _WaveData1_0;
+            float4 _WaveData1_1;
+            float4 _WaveData1_2;
+            float4 _WaveData1_3;
+            float4 _WaveData1_4;
+            float4 _WaveData1_5;
+            float4 _WaveData1_6;
+            float4 _WaveData1_7;
 
-            static const float TWO_PI = 6.28318530718;
+            float4 _WaveData2_0;
+            float4 _WaveData2_1;
+            float4 _WaveData2_2;
+            float4 _WaveData2_3;
+            float4 _WaveData2_4;
+            float4 _WaveData2_5;
+            float4 _WaveData2_6;
+            float4 _WaveData2_7;
 
             struct Attributes
             {
@@ -56,35 +67,44 @@ Shader "Crimson/WaterURP"
 
             struct Varyings
             {
-                float4 positionCS : SV_POSITION;
+                float4 positionCS : SV_Position;
                 float3 worldPos   : TEXCOORD0;
                 float3 normalWS   : TEXCOORD1;
                 half   fogFactor  : TEXCOORD2;
             };
+
+            void AccumulateWave(float amp, float wl, float2 dir, float spd, float3 worldPos, inout float y, inout float2 grad)
+            {
+                wl = max(wl, 0.1);
+                spd = max(spd, 0.001);
+                dir = normalize(dir);
+
+                // k = 2pi / wl (inline constant to dodge any const parsing issues)
+                float k = 6.2831853 / wl;
+                float omega = sqrt(_Gravity * k) * spd;
+
+                float phase = k * dot(dir, worldPos.xz) - omega * _SimTime;
+
+                float s = sin(phase);
+                float c = cos(phase);
+
+                y += amp * s;
+                grad += (amp * k) * dir * c;
+            }
 
             void SampleWaves(float3 worldPos, out float height, out float3 normalWS)
             {
                 float y = 0.0;
                 float2 grad = float2(0.0, 0.0);
 
-                [unroll]
-                for (int i = 0; i < _WaveCount; i++)
-                {
-                    float wl = max(_WL[i], 0.1);
-                    float k = TWO_PI / wl;
-                    float2 d = normalize(float2(_DirX[i], _DirZ[i]));
-                    float omega = sqrt(_Gravity * k) * max(_Speed[i], 0.001);
-
-                    float phase = k * dot(d, worldPos.xz) - omega * _SimTime;
-
-                    float s = sin(phase);
-                    float c = cos(phase);
-
-                    y += _Amp[i] * s;
-
-                    float ak = _Amp[i] * k;
-                    grad += ak * d * c; // ∂y/∂x, ∂y/∂z
-                }
+                if (_WaveCount > 0.0) AccumulateWave(_WaveData1_0.x, _WaveData1_0.y, _WaveData1_0.zw, _WaveData2_0.x, worldPos, y, grad);
+                if (_WaveCount > 1.0) AccumulateWave(_WaveData1_1.x, _WaveData1_1.y, _WaveData1_1.zw, _WaveData2_1.x, worldPos, y, grad);
+                if (_WaveCount > 2.0) AccumulateWave(_WaveData1_2.x, _WaveData1_2.y, _WaveData1_2.zw, _WaveData2_2.x, worldPos, y, grad);
+                if (_WaveCount > 3.0) AccumulateWave(_WaveData1_3.x, _WaveData1_3.y, _WaveData1_3.zw, _WaveData2_3.x, worldPos, y, grad);
+                if (_WaveCount > 4.0) AccumulateWave(_WaveData1_4.x, _WaveData1_4.y, _WaveData1_4.zw, _WaveData2_4.x, worldPos, y, grad);
+                if (_WaveCount > 5.0) AccumulateWave(_WaveData1_5.x, _WaveData1_5.y, _WaveData1_5.zw, _WaveData2_5.x, worldPos, y, grad);
+                if (_WaveCount > 6.0) AccumulateWave(_WaveData1_6.x, _WaveData1_6.y, _WaveData1_6.zw, _WaveData2_6.x, worldPos, y, grad);
+                if (_WaveCount > 7.0) AccumulateWave(_WaveData1_7.x, _WaveData1_7.y, _WaveData1_7.zw, _WaveData2_7.x, worldPos, y, grad);
 
                 height = _SeaLevel + y;
                 normalWS = normalize(float3(-grad.x, 1.0, -grad.y));
@@ -96,14 +116,12 @@ Shader "Crimson/WaterURP"
 
                 float3 worldPos = TransformObjectToWorld(v.positionOS.xyz);
 
-                float height;
-                float3 nWS;
-                SampleWaves(worldPos, height, nWS);
-                worldPos.y = height;
+                float h; float3 nWS;
+                SampleWaves(worldPos, h, nWS);
+                worldPos.y = h;
 
                 o.worldPos = worldPos;
                 o.normalWS = nWS;
-
                 o.positionCS = TransformWorldToHClip(worldPos);
                 o.fogFactor = ComputeFogFactor(o.positionCS.z);
                 return o;
@@ -114,12 +132,10 @@ Shader "Crimson/WaterURP"
                 float3 V = normalize(_WorldSpaceCameraPos.xyz - i.worldPos);
                 float3 N = normalize(i.normalWS);
 
-                // Simple color + fresnel
                 float3 baseCol = lerp(_DeepColor.rgb, _ShallowColor.rgb, saturate(N.y));
                 float fresnel = pow(saturate(1.0 - dot(N, V)), _FresnelPower) * _FresnelStrength;
 
                 float3 col = baseCol + fresnel;
-
                 col = MixFog(col, i.fogFactor);
                 return float4(col, 1.0);
             }
