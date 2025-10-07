@@ -12,22 +12,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cc7d4607925663e44b5f206cf1d71116, type: 3}
   m_Name: WaterSettings
   m_EditorClassIdentifier: Assembly-CSharp::WaterSettings
-  seaLevel: 0
-  gravity: 9.81
+  seaLevel: 2.09
+  gravity: 8.74
   timeScale: 1
   waves:
-  - amplitude: 0.6
-    wavelength: 12
-    directionDegrees: 20
-    steepness: 0.6
+  - amplitude: 1.7
+    wavelength: 51.3
+    directionDegrees: 28.5
+    steepness: 0.151
     speed: 1
-  - amplitude: 0.4
-    wavelength: 8
-    directionDegrees: 135
-    steepness: 0.5
-    speed: 1.1
-  - amplitude: 0.3
-    wavelength: 20
-    directionDegrees: 300
-    steepness: 0.5
-    speed: 0.9
+  - amplitude: 0.02
+    wavelength: 5.49
+    directionDegrees: 136.5
+    steepness: 0.244
+    speed: 1
+  - amplitude: 0.66
+    wavelength: 22.2
+    directionDegrees: 312.3
+    steepness: 0.46652415
+    speed: 1

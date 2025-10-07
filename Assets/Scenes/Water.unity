@@ -728,6 +728,7 @@ GameObject:
   - component: {fileID: 821884025}
   - component: {fileID: 821884024}
   - component: {fileID: 821884026}
+  - component: {fileID: 821884027}
   m_Layer: 0
   m_Name: WaterSurface
   m_TagString: Untagged
@@ -818,8 +819,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6ffb9307044c415428aaff797fdac77a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WaterMeshGrid
-  segments: 200
-  size: 569.8
+  segments: 500
+  size: 1000
+--- !u!114 &821884027
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 821884022}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 92cfa1116342ec043ba26032a1f05cfa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WaterRenderer
+  settings: {fileID: 11400000, guid: 904977eba7ee7144e9ba6f80998e4db4, type: 2}
+  animateInEditMode: 0
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
